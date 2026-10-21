@@ -24,8 +24,8 @@
 | 이름 | GitHub | 주 담당 |
 |---|---|---|
 | 엄태은 (팀장) | ten-infosec | AI 판독 API(모델 서빙), Git 관리 |
-| 장성은 | jsejj87 | 환자 관리 API (CRUD) |
-| 김민준 | klas98765-pixel | DB 모델·마이그레이션 |
+| 장성은 | jsejj87 | DB 모델·마이그레이션 |
+| 김민준 | klas98765-pixel | 환자 관리 API (CRUD) |
 | 여현지 | yeohj1226 | 통계 API·대시보드·문서 정리 |
 
 - 역할은 "주 담당"이며, 모든 Stage 과제는 함께 공부하고 진행한다
@@ -42,7 +42,7 @@
 - Git 관리: develop 브랜치 생성, PR 최종 merge, develop → main 병합
 - 연결: DB 모델(③)의 판독 기록 테이블, 환자 API(②)의 환자 정보와 연결됨
 
-#### ② 환자 관리 API (CRUD) — 장성은
+#### ② 환자 관리 API (CRUD) — 김민준
 - 하는 일: 백오피스에서 환자를 등록·조회·수정·삭제하는 API 만들기
   - `POST /patients` 등록 / `GET /patients` 목록 / `GET /patients/{id}` 상세
   - `PATCH /patients/{id}` 수정 / `DELETE /patients/{id}` 삭제
@@ -50,7 +50,7 @@
 - 주로 다루는 곳: `app/schemas/`(요청·응답 데이터 형식), `app/repositories/`(DB 읽기·쓰기), `app/services/`, `app/apis/`
 - 연결: DB 모델(③)이 먼저 있어야 저장 가능, 판독 API(①)와 통계(④)가 환자 데이터를 사용
 
-#### ③ DB 모델·마이그레이션 — 김민준
+#### ③ DB 모델·마이그레이션 — 장성은
 - 하는 일: 데이터를 저장할 "표(테이블)" 설계와 생성
   - ERD를 보고 `app/models/`에 테이블 모델 작성 (환자, 판독 기록 등)
   - Alembic으로 마이그레이션(테이블 생성·변경 기록) 수행
