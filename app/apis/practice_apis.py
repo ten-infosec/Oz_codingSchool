@@ -128,7 +128,12 @@ def get_users():
 
 # ===== API 2: GET /practice_api/users/{user_id} =====
 
-# TODO(장성은): 특정 회원 조회 (없으면 404)
+@router.get("/users/{user_id}", summary="특정 회원 조회")
+def get_user(user_id: int):
+    # id로 회원을 찾는다 (없으면 find_user_or_404가 404 에러를 보낸다)
+    user = find_user_or_404(user_id)
+    # password를 빼고 id·name·age·email만 돌려준다
+    return to_public(user)
 
 
 # ===== API 3: POST /practice_api/users =====
@@ -173,4 +178,10 @@ def create_user(user: UserCreate):
 
 # ===== API 5: DELETE /practice_api/users/{user_id} =====
 
-# TODO(장성은): 회원 삭제 (없으면 404)
+@router.delete("/users/{user_id}", summary="회원 삭제")
+def delete_user(user_id: int):
+    # id로 회원을 찾는다 (없으면 find_user_or_404가 404 에러를 보낸다)
+    user = find_user_or_404(user_id)
+    # 찾은 회원을 user_list에서 지운다
+    user_list.remove(user)
+    return {"message": f"id가 {user_id}인 회원을 삭제했습니다."}
