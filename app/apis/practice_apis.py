@@ -124,7 +124,7 @@ class UpdateUserRequest(BaseModel):
         return v
 
 @router.patch(
-        "/practice_api/users/{user_id}",
+        "/users/{user_id}",
         summary="회원 정보 수정",
 )
 def update_user_handler(
@@ -146,7 +146,7 @@ def update_user_handler(
                 user["email"] = body.email
             if body.password:
                 user["password"] = body.password
-            return {"message": "회원 정보가 성공적으로 수정되었습니다.", "user": user}
+            return {"message": "회원 정보가 성공적으로 수정되었습니다.", "user": to_public(user)}
     raise HTTPException(
         status_code=404, detail="해당하는 회원을 찾을 수 없습니다."
     )
