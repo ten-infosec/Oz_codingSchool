@@ -96,7 +96,21 @@ def find_user_or_404(user_id: int) -> dict:
 
 # ===== Schema: UserCreate (POST) =====
 
-# TODO(김민준): 회원 추가용 UserCreate 작성 (name 2~10자, age 14 이상, email 최대 30자+정규식, password 8~20자+규칙)
+class UserCreate(BaseModel):
+    name: str = Field(min_length=2, max_length=10)
+    age: int = Field(ge=14)
+    email: str = Field(max_length=30)
+    password: str = Field(min_length=8, max_length=20)
+
+    @field_validator("email")
+    @classmethod
+    def validate_email(cls, value: str) -> str:
+        return check_email(value)
+
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, value: str) -> str:
+        return check_password(value)
 
 
 # ===== Schema: UserUpdate (PATCH) =====
@@ -119,7 +133,37 @@ def get_users():
 
 # ===== API 3: POST /practice_api/users =====
 
-# TODO(김민준): 회원 추가 (이메일 중복 불가, id 자동 증가)
+@router.post(
+    "/users",
+    status_code=status.HTTP_201_CREATED,
+    summary="회원 추가",
+)
+def create_user(user: UserCreate):
+    # 1. 이메일 중복 검사
+    for existing_user in user_list:
+        if existing_user["email"] == user.email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="이미 등록된 이메일입니다.",
+            )
+
+    # 2. 새로운 회원 ID 자동 생성
+    new_id = max(
+        (existing_user["id"] for existing_user in user_list),
+        default=0,
+    ) + 1
+
+    # 3. 새로운 회원 데이터 생성
+    new_user = {
+        "id": new_id,
+        **user.model_dump(),
+    }
+
+    # 4. 회원 목록에 추가
+    user_list.append(new_user)
+
+    # 5. 비밀번호 제외 후 반환
+    return to_public(new_user)
 
 
 # ===== API 4: PATCH /practice_api/users/{user_id} =====
