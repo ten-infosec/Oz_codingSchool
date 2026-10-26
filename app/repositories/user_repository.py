@@ -24,7 +24,19 @@ async def get_by_phone_number(db: AsyncSession, phone_number: str) -> User | Non
 
 
 # ===== Signup / Withdraw (담당: 장성은) =====
-# 예: async def create(db, ...) -> User / async def delete(db, user) -> None
+async def create(db: AsyncSession, user: User) -> User:
+    # 새 회원을 DB에 저장
+    db.add(user)
+    await db.commit()
+    # DB가 만들어 준 값(id, created_at 등)을 다시 읽어 온다
+    await db.refresh(user)
+    return user
+
+
+async def delete(db: AsyncSession, user: User) -> None:
+    # 회원을 DB에서 바로 삭제 (Hard Delete, 명세 11-4)
+    await db.delete(user)
+    await db.commit()
 
 
 # ===== My Page (담당: 김민준) =====

@@ -16,8 +16,34 @@ router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
 
 # ===== Signup / Withdraw (담당: 장성은) =====
-# POST   /api/v1/users/signup   회원가입  (status_code=201, 인증 없음)
-# DELETE /api/v1/users/me       회원 탈퇴 (CurrentUser)
+from fastapi import Response
+
+from app.core.security import REFRESH_COOKIE_NAME, REFRESH_COOKIE_PATH
+from app.schemas.user import SignupRequest
+
+
+# POST /api/v1/users/signup 회원가입 (명세 2번)
+@router.post(
+    "/signup",
+    summary="회원가입",
+    status_code=status.HTTP_201_CREATED,
+    response_model=UserResponse,
+)
+async def signup(body: SignupRequest, db: DbSession):
+    return await user_service.signup(db, body)
+
+
+# DELETE /api/v1/users/me 회원 탈퇴 (명세 11번)
+@router.delete(
+    "/me",
+    summary="회원 탈퇴",
+    status_code=status.HTTP_204_NO_CONTENT,
+)
+async def withdraw(current_user: CurrentUser, response: Response, db: DbSession):
+    await user_service.withdraw(db, current_user)
+    # 리프레시 토큰 쿠키도 삭제 (로그아웃과 같은 path를 줘야 지워진다)
+    response.delete_cookie(key=REFRESH_COOKIE_NAME, path=REFRESH_COOKIE_PATH)
+    # 204는 응답 본문이 없어야 하므로 아무것도 return하지 않는다
 
 
 # ===== My Page (담당: 김민준) =====
