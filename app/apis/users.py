@@ -28,4 +28,41 @@ router = APIRouter(prefix="/api/v1/users", tags=["users"])
 
 # ===== Admin (담당: 여현지) =====
 # GET    /api/v1/users                    회원 목록 조회 (CurrentAdmin)
-# PATCH  /api/v1/users/{user_id}/role     회원 권한 변경 (CurrentAdmin)
+# PATCH  /api/v1/users/role     회원 권한 변경 (CurrentAdmin)
+from typing import Annotated
+
+from fastapi import Query
+
+from app.schemas.user import (
+    RoleUpdateRequest,
+    RoleUpdateResponse,
+    UserListQuery,
+    UserListResponse,
+)
+
+@router.get(
+    "",
+    response_model=UserListResponse,
+    summary="회원 목록 조회",
+)
+async def get_users(
+    admin: CurrentAdmin,
+    db: DbSession,
+    query: Annotated[UserListQuery, Query()],
+):
+    # 이메일/이름 검색(keyword) + 부서 필터(department) + 페이지네이션
+    return await user_service.get_users(db, query)
+
+
+@router.patch(
+    "/role",
+    response_model=RoleUpdateResponse,
+    summary="회원 권한 변경",
+)
+async def update_user_roles(
+    admin: CurrentAdmin,
+    db: DbSession,
+    body: RoleUpdateRequest,
+):
+    # user_ids에 해당하는 회원들의 권한을 body.role로 일괄 변경
+    return await user_service.update_roles(db, body)
