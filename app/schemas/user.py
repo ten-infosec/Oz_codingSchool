@@ -79,6 +79,39 @@ class SignupRequest(BaseModel):
 #     class PasswordChangeRequest(BaseModel): current_password: str, new_password: Password
 
 
+from pydantic import field_validator
+
 # ===== Admin (담당: 여현지) =====
-# 예: class UserListQuery(BaseModel): keyword: str | None = None, department: Department | None = None
-#     class RoleUpdateRequest(BaseModel): role: Role
+# REQ-USER-004 회원 목록 조회, REQ-USER-005 회원 권한 변경
+
+class UserListQuery(BaseModel):
+    # GET /api/v1/users 쿼리 파라미터
+    keyword: str | None = Field(default=None, max_length=100)  # 이메일 또는 이름 검색
+    department: Department | None = None  # 부서 필터 (미입력 시 전체)
+    page: int = Field(default=1, ge=1)
+    size: int = Field(default=20, ge=1, le=100)
+
+class UserListResponse(BaseModel):
+    # GET /api/v1/users 응답
+    total: int  # 검색·필터 조건에 해당하는 전체 회원 수
+    page: int
+    size: int
+    items: list[UserResponse]
+
+
+class RoleUpdateRequest(BaseModel):
+    # PATCH /api/v1/users/role 요청 본문
+    user_ids: list[int] = Field(min_length=1)  # 권한을 변경할 회원 ID 목록 (1개 이상)
+    role: Role  # PENDING / STAFF / ADMIN
+
+    @field_validator("user_ids")
+    @classmethod
+    def _remove_duplicate_ids(cls, value: list[int]) -> list[int]:
+        # 같은 ID가 여러 번 들어와도 한 번만 처리 (순서는 유지)
+        return list(dict.fromkeys(value))
+
+class RoleUpdateResponse(BaseModel):
+    # PATCH /api/v1/users/role 응답
+    updated_count: int  # 권한이 변경된 회원 수
+    role: Role  # 변경된 권한
+    users: list[UserResponse]  # 권한이 변경된 회원 목록

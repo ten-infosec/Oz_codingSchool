@@ -45,3 +45,42 @@ async def delete(db: AsyncSession, user: User) -> None:
 
 # ===== Admin (담당: 여현지) =====
 # 예: async def get_list(db, keyword, department) -> list[User] / async def update_role(db, user, role) -> User
+from sqlalchemy import func, or_
+from app.models.enums import Department, Role
+
+async def get_list(
+    db: AsyncSession,
+    keyword: str | None,
+    department: Department | None,
+    offset: int,
+    limit: int,
+) -> tuple[list[User], int]:
+    # 회원 목록 조회 (이메일/이름 검색 + 부서 필터 + 페이지네이션)
+    # 반환: (현재 페이지 회원 목록, 조건에 해당하는 전체 회원 수)
+    conditions = []
+    if keyword:
+        pattern = f"%{keyword}%"
+        conditions.append(or_(User.email.ilike(pattern), User.name.ilike(pattern)))
+    if department:
+        conditions.append(User.department == department)
+
+    total = await db.scalar(select(func.count()).select_from(User).where(*conditions))
+
+    result = await db.execute(
+        select(User).where(*conditions).order_by(User.id).offset(offset).limit(limit)
+    )
+    return list(result.scalars().all()), total or 0
+
+
+async def get_by_ids(db: AsyncSession, user_ids: list[int]) -> list[User]:
+    # 여러 명 한 번에 조회 (존재하지 않는 ID는 결과에서 빠짐)
+    result = await db.execute(select(User).where(User.id.in_(user_ids)))
+    return list(result.scalars().all())
+
+
+async def update_roles(db: AsyncSession, users: list[User], role: Role) -> list[User]:
+    # 선택된 회원들의 권한을 한꺼번에 변경
+    for user in users:
+        user.role = role
+    await db.flush()
+    return users
