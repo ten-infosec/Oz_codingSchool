@@ -400,31 +400,226 @@ REQ-USER-005 참고
 
 ## 8. 마이페이지 조회 (담당: 김민준)
 
-<!--
-REQ-USER-006 참고
-- 응답: 이름, 이메일, 부서, 성별, 휴대폰 번호, 권한
-- PENDING 권한도 접근 가능
--->
+### API 기본 정보
 
+| 항목 | 내용 |
+|---|---|
+| 요구사항 ID | REQ-USER-006 |
+| HTTP Method | GET |
+| URL | `/api/v1/users/me` |
+| 기능 | 로그인한 사용자의 마이페이지 정보 조회 |
+| 인증 | 필수 (Access Token) |
+| 접근 권한 | PENDING, STAFF, ADMIN |
+
+### 요청 (Request)
+
+- Header: `Authorization: Bearer {access_token}`
+- Path Parameter: 없음
+- Query Parameter: 없음
+- Request Body: 없음
+
+### 성공 응답 (Response)
+
+- HTTP Status: `200 OK`
+
+```json
+{
+  "name": "홍길동",
+  "email": "hong@example.com",
+  "department": "DEV",
+  "gender": "MALE",
+  "phone_number": "010-1234-5678",
+  "role": "PENDING"
+}
+```
+
+※ 응답 값은 예시이며, 실제 필드명과 선택값은 팀 공통 모델 및 요구사항과 일치시킨다.
+
+### 오류 응답
+
+| HTTP Status | 발생 상황 |
+|---|---|
+| 401 Unauthorized | Access Token이 없거나 유효하지 않은 경우 |
+| 404 Not Found | 인증된 사용자 계정이 DB에 존재하지 않는 경우 |
+
+### 처리 흐름
+
+1. Access Token으로 로그인 사용자를 확인한다.
+2. 인증된 사용자의 정보를 DB에서 조회한다.
+3. 이름, 이메일, 부서, 성별, 휴대폰 번호, 권한을 반환한다.
+4. 비밀번호 및 비밀번호 해시는 응답에 포함하지 않는다.
+5. PENDING 권한 사용자도 조회할 수 있다.
 ---
 
 ## 9. 회원 정보 수정 (담당: 김민준)
 
-<!--
-REQ-USER-007 참고
-- 부분 수정(Partial): 부서, 휴대폰 번호 중 보낸 항목만 수정
-- 휴대폰 번호 중복 시 409
--->
+### API 기본 정보
+
+| 항목 | 내용 |
+|---|---|
+| 요구사항 ID | REQ-USER-007 |
+| HTTP Method | PATCH |
+| URL | `/api/v1/users/me` |
+| 기능 | 로그인한 사용자의 부서 및 휴대폰 번호 수정 |
+| 인증 | 필수 (Access Token) |
+| 접근 권한 | PENDING, STAFF, ADMIN |
+
+### 요청 (Request)
+
+- Header: `Authorization: Bearer {access_token}`
+- Content-Type: `application/json`
+- Path Parameter: 없음
+- Query Parameter: 없음
+- Request Body: 부서, 휴대폰 번호 (선택 항목)
+
+**요청 예시**
+
+```json
+{
+  "department": "DEV",
+  "phone_number": "010-1234-5678"
+}
+```
+
+**부분 수정 예시 — 휴대폰 번호만 변경**
+
+```json
+{
+  "phone_number": "010-9876-5432"
+}
+```
+
+- `department`: 변경할 부서 (선택)
+- `phone_number`: 변경할 휴대폰 번호 (선택)
+- 요청에 포함된 항목만 수정한다.
+- 요청에 없는 항목은 기존 값을 유지한다.
+- 이름, 이메일, 성별, 권한은 이 API로 수정할 수 없다.
+- 부서의 허용값과 휴대폰 번호 형식은 팀 공통 모델 및 검증 기준을 따른다.
+- 변경 항목이 없거나 허용되지 않은 항목이 전달되면 422 오류를 반환하도록 정의한다.
+
+### 성공 응답 (Response)
+
+- HTTP Status: `200 OK`
+
+```json
+{
+  "name": "홍길동",
+  "email": "hong@example.com",
+  "department": "DEV",
+  "gender": "MALE",
+  "phone_number": "010-9876-5432",
+  "role": "PENDING"
+}
+```
+
+※ 응답은 수정 완료된 회원 정보이며, 비밀번호 및 비밀번호 해시는 포함하지 않는다.
+
+### 오류 응답
+
+| HTTP Status | 발생 상황 |
+|---|---|
+| 401 Unauthorized | Access Token이 없거나 유효하지 않은 경우 |
+| 404 Not Found | 인증된 사용자 계정이 DB에 존재하지 않는 경우 |
+| 409 Conflict | 변경하려는 휴대폰 번호를 다른 회원이 사용 중인 경우 |
+| 422 Unprocessable Content | 부서·휴대폰 번호 형식이 잘못되었거나 유효하지 않은 요청인 경우 |
+
+### 처리 흐름
+
+1. Access Token으로 로그인 사용자를 확인한다.
+2. DB에서 로그인한 사용자의 정보를 조회한다.
+3. 요청 본문에 부서 또는 휴대폰 번호가 있는지 확인한다.
+4. 전달된 값의 형식과 허용 범위를 검증한다.
+5. 휴대폰 번호 변경 시 다른 회원과 중복되는지 확인한다.
+6. 중복된 번호라면 409 오류를 반환한다.
+7. 요청에 포함된 항목만 수정하고 나머지 정보는 유지한다.
+8. 변경 사항을 DB에 저장한다.
+9. 수정된 회원 정보를 반환한다.
 
 ---
 
 ## 10. 비밀번호 변경 (담당: 김민준)
 
-<!--
-REQ-USER-008 참고
-- 본문: 기존 비밀번호, 새 비밀번호
-- 기존 비밀번호가 틀리면 에러 (상태 코드는 명세에서 정해 주세요)
--->
+### API 기본 정보
+
+| 항목 | 내용 |
+|---|---|
+| 요구사항 ID | REQ-USER-008 |
+| HTTP Method | PATCH |
+| URL | `/api/v1/users/me/password` |
+| 기능 | 로그인한 사용자의 비밀번호 변경 |
+| 인증 | 필수 (Access Token) |
+| 접근 권한 | PENDING, STAFF, ADMIN |
+
+### 요청 (Request)
+
+- Header: `Authorization: Bearer {access_token}`
+- Content-Type: `application/json`
+- Path Parameter: 없음
+- Query Parameter: 없음
+- Request Body: 기존 비밀번호, 새 비밀번호 (모두 필수)
+
+**요청 예시**
+
+```json
+{
+  "current_password": "OldPassword123!",
+  "new_password": "NewPassword456!"
+}
+```
+
+**요청 필드 설명**
+
+| 필드 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| current_password | string | Y | 현재 사용 중인 비밀번호 |
+| new_password | string | Y | 새로 변경할 비밀번호 |
+
+- 기존 비밀번호가 일치해야 변경할 수 있다.
+- 새 비밀번호는 기존 비밀번호와 달라야 한다.
+- 새 비밀번호는 팀 공통 비밀번호 정책을 충족해야 한다.
+- 비밀번호는 평문으로 DB에 저장하지 않고 argon2 방식으로 해싱한다.
+
+### 성공 응답 (Response)
+
+- HTTP Status: `200 OK`
+
+```json
+{
+  "message": "비밀번호가 성공적으로 변경되었습니다."
+}
+```
+
+- 변경된 비밀번호는 응답에 포함하지 않는다.
+- 비밀번호 변경 후 기존 토큰 처리 방식은 팀 공통 인증 정책을 따른다.
+
+### 오류 응답
+
+| HTTP Status | 발생 상황 |
+|---|---|
+| 400 Bad Request | 기존 비밀번호가 일치하지 않거나 새 비밀번호가 기존 비밀번호와 같은 경우 |
+| 401 Unauthorized | Access Token이 없거나 유효하지 않은 경우 |
+| 404 Not Found | 인증된 사용자 계정이 DB에 존재하지 않는 경우 |
+| 422 Unprocessable Content | 필수 항목 누락, 비밀번호 형식 또는 공통 정책 위반 |
+
+### 처리 흐름
+
+1. Access Token으로 로그인 사용자를 확인한다.
+2. DB에서 로그인한 사용자의 계정을 조회한다.
+3. 기존 비밀번호와 DB에 저장된 비밀번호 해시를 비교한다.
+4. 기존 비밀번호가 틀리면 400 오류를 반환한다.
+5. 새 비밀번호가 기존 비밀번호와 다른지 확인한다.
+6. 새 비밀번호가 팀 공통 비밀번호 정책을 만족하는지 검증한다.
+7. 새 비밀번호를 공통 argon2 해싱 함수로 암호화한다.
+8. 기존 비밀번호 해시를 새 해시로 변경한다.
+9. 변경 사항을 DB에 저장한다.
+10. 성공 메시지를 반환한다.
+
+### 보안 및 주의사항
+
+- 비밀번호 원문을 DB나 로그에 기록하지 않는다.
+- 로그인한 사용자 본인의 비밀번호만 변경할 수 있다.
+- 기존 비밀번호 확인 및 해싱은 공통 인증 모듈을 사용한다.
+- 비밀번호 변경 후 토큰 무효화 여부는 인증 담당자와 협의한다.
 
 ---
 
