@@ -71,6 +71,7 @@ class UserResponse(BaseModel):
 
 # ===== Admin (담당: 여현지) =====
 # REQ-USER-004 회원 목록 조회, REQ-USER-005 회원 권한 변경
+
 from pydantic import field_validator
 
 class UserListQuery(BaseModel):
