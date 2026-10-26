@@ -378,23 +378,238 @@
 
 ## 6. 회원 목록 조회 (담당: 여현지)
 
-<!--
-REQ-USER-004 참고
-- 쿼리 파라미터: 검색어(이메일 또는 이름), 부서 필터 등
-- 응답: 회원 목록 (고유 ID, 이메일, 이름, 부서, 성별, 휴대폰 번호, 계정 활성화 여부)
-- 권한: ADMIN만 가능 (아니면 403)
--->
+### 6-1. API 개요
+
+| 항목 | 내용 |
+|---|---|
+| API 이름 | 회원 목록 조회 API |
+| 설명 | 관리자가 회원관리 메뉴에서 전체 회원 목록을 조회한다. 이메일 또는 이름으로 검색하고, 부서별로 필터링할 수 있다. |
+| 엔드포인트 | `/api/v1/users` |
+| 메서드 | `GET` |
+| 인증 필요 여부 | Y (ADMIN 권한 필요) |
+| 요구사항 | REQ-USER-004 |
+
+### 6-2. 요청(Request)
+
+**Headers**
+
+| Key | Value | 설명 |
+|---|---|---|
+| Authorization | Bearer {access_token} | 로그인 시 발급받은 액세스 토큰 |
+
+**본문 필드**
+
+| 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| 없음 | - | - | 요청 본문을 사용하지 않음 |
+
+**쿼리 파라미터**
+
+| 쿼리 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| keyword | string | N | 검색어. 이메일 또는 이름에 포함된 경우 조회 (부분 일치) |
+| department | string | N | 부서 필터. `RESEARCH`(연구), `MEDICAL`(의료), `DEVELOPMENT`(개발). 미입력 시 전체 부서 |
+| page | integer | N | 페이지 번호 (기본값 1) |
+| size | integer | N | 페이지당 조회 개수 (기본값 20) |
+
+요청 예시
+
+```
+GET /api/v1/users?keyword=홍길동&department=MEDICAL&page=1&size=20
+```
+
+### 6-3. 응답(Response)
+
+**성공: 200 OK**
+
+```json
+{
+  "total": 1,
+  "page": 1,
+  "size": 20,
+  "items": [
+    {
+      "id": 1,
+      "email": "doctor@example.com",
+      "name": "홍길동",
+      "department": "MEDICAL",
+      "gender": "M",
+      "phone_number": "01012345678",
+      "role": "STAFF",
+      "is_active": true
+    }
+  ]
+}
+```
+
+| 필드명 | 타입 | 설명 |
+|---|---|---|
+| total | integer | 검색·필터 조건에 해당하는 전체 회원 수 |
+| page | integer | 현재 페이지 번호 |
+| size | integer | 페이지당 조회 개수 |
+| items | array | 회원 목록 (`UserResponse`, 1-5 참고) |
+| items[].id | integer | 고유 ID |
+| items[].email | string | 이메일 |
+| items[].name | string | 이름 |
+| items[].department | string | 부서 (`RESEARCH` / `MEDICAL` / `DEVELOPMENT`) |
+| items[].gender | string | 성별 (`M` / `F`) |
+| items[].phone_number | string | 휴대폰 번호 |
+| items[].role | string | 현재 권한 (`PENDING` / `STAFF` / `ADMIN`) |
+| items[].is_active | boolean | 계정 활성화 여부 |
+
+검색 결과가 없는 경우에도 `200 OK`와 함께 빈 목록을 돌려준다.
+
+```json
+{
+  "total": 0,
+  "page": 1,
+  "size": 20,
+  "items": []
+}
+```
+
+**실패**
+
+- 401 Unauthorized: 토큰이 없거나 만료·변조된 경우
+
+```json
+{
+  "detail": "인증이 필요합니다."
+}
+```
+
+- 403 Forbidden: ADMIN 권한이 아닌 경우
+
+```json
+{
+  "detail": "관리자 권한이 필요합니다."
+}
+```
+
+- 422 Unprocessable Entity: `department` 값이 허용되지 않는 값이거나 `page`, `size`가 올바르지 않은 경우 (1-6 참고)
+
+### 6-4. 비고
+
+- `ADMIN` 권한만 호출할 수 있다. `STAFF`, `PENDING` 권한은 403을 받는다.
+- `keyword`는 이메일과 이름 두 컬럼을 함께 검색한다. (OR 조건)
+- `keyword`와 `department`를 함께 보내면 두 조건을 모두 만족하는 회원만 조회한다. (AND 조건)
+- 요구사항의 조회 항목에는 `role`이 없지만, 이어지는 권한 변경(REQ-USER-005) 화면에서 현재 권한을 보여줘야 하므로 응답에 포함했다. 필요 없다면 제거해도 된다.
+- 요구사항에 페이지네이션 언급이 없어 `page`, `size`는 임의로 추가했다. 전체 조회만 필요하면 두 파라미터와 `total`, `page`, `size`를 빼고 배열만 돌려주도록 바꾸면 된다.
+- 비밀번호 등 민감한 정보는 응답에 포함하지 않는다.
 
 ---
 
 ## 7. 회원 권한 변경 (담당: 여현지)
 
-<!--
-REQ-USER-005 참고
-- 경로 파라미터: user_id
-- 본문: 변경할 권한 (PENDING / STAFF / ADMIN)
-- 권한: ADMIN만 가능
--->
+### 7-1. API 개요
+
+| 항목 | 내용 |
+|---|---|
+| API 이름 | 회원 권한 변경 API |
+| 설명 | 관리자가 회원 목록에서 선택한 회원들의 권한을 대기자, 스태프, 어드민 중 하나로 변경한다. |
+| 엔드포인트 | `/api/v1/users/role` |
+| 메서드 | `PATCH` |
+| 인증 필요 여부 | Y (ADMIN 권한 필요) |
+| 요구사항 | REQ-USER-005 |
+
+### 7-2. 요청(Request)
+
+**Headers**
+
+| Key | Value | 설명 |
+|---|---|---|
+| Authorization | Bearer {access_token} | 로그인 시 발급받은 액세스 토큰 |
+| Content-Type | application/json | 요청 본문 형식 |
+
+**본문 필드**
+
+| 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| user_ids | array[integer] | Y | 권한을 변경할 회원의 고유 ID 목록 (1개 이상) |
+| role | string | Y | 변경할 권한. `PENDING`(대기자), `STAFF`(스태프), `ADMIN`(어드민) |
+
+```json
+{
+  "user_ids": [2, 3, 5],
+  "role": "STAFF"
+}
+```
+
+**쿼리 파라미터**
+
+| 쿼리 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| 없음 | - | - | 쿼리 파라미터를 사용하지 않음 |
+
+### 7-3. 응답(Response)
+
+**성공: 200 OK**
+
+```json
+{
+  "updated_count": 3,
+  "role": "STAFF",
+  "users": [
+    {
+      "id": 2,
+      "email": "kim@example.com",
+      "name": "김철수",
+      "department": "RESEARCH",
+      "gender": "M",
+      "phone_number": "01011112222",
+      "role": "STAFF",
+      "is_active": true
+    }
+  ]
+}
+```
+
+| 필드명 | 타입 | 설명 |
+|---|---|---|
+| updated_count | integer | 권한이 변경된 회원 수 |
+| role | string | 변경된 권한 |
+| users | array | 권한이 변경된 회원 목록 (`UserResponse`, 1-5 참고) |
+
+**실패**
+
+- 401 Unauthorized: 토큰이 없거나 만료·변조된 경우
+
+```json
+{
+  "detail": "인증이 필요합니다."
+}
+```
+
+- 403 Forbidden: ADMIN 권한이 아닌 경우
+
+```json
+{
+  "detail": "관리자 권한이 필요합니다."
+}
+```
+
+- 404 Not Found: `user_ids` 중 존재하지 않는 회원이 있는 경우
+
+```json
+{
+  "detail": "존재하지 않는 사용자가 포함되어 있습니다."
+}
+```
+
+- 422 Unprocessable Entity: `user_ids`가 비어 있거나, `role`이 `PENDING` / `STAFF` / `ADMIN`이 아닌 경우 (1-6 참고)
+
+### 7-4. 비고
+
+- `ADMIN` 권한만 호출할 수 있다.
+- 권한별 접근 범위는 다음과 같다.
+  - `PENDING`(대기자): 마이페이지 외 모든 서비스 접근 불가
+  - `STAFF`(스태프): 내부 직원. 흉부 X-ray 관련 모든 읽기, 쓰기, 수정 작업 가능
+  - `ADMIN`(어드민): 시스템 관리자. 모든 항목에 대한 데이터 접근 가능
+- 여러 회원을 한 번에 변경하며, 하나라도 실패하면 전체를 롤백한다. (전부 성공하거나 전부 실패)
+- 리소스의 일부만 수정하므로 `PUT`이 아닌 `PATCH`를 사용했다.
+- 관리자가 자기 자신의 권한을 낮추면 관리자가 한 명도 남지 않을 수 있다. 본인을 `user_ids`에 포함하면 400으로 막을지는 팀에서 정하면 된다. (이 경우 400 Bad Request 응답 추가)
+- 이미 같은 권한인 회원이 포함되어 있어도 오류 없이 처리하고, `updated_count`에는 그대로 포함한다.
+- 권한이 바뀐 회원이 이미 로그인한 상태라면, 기존 액세스 토큰의 권한은 만료되기 전(최대 30분)까지 유지될 수 있다.
 
 ---
 
