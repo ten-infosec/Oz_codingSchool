@@ -137,13 +137,108 @@
 
 ## 2. 회원가입 (담당: 장성은)
 
-<!--
-아래 형식으로 작성해 주세요. (로그인 API 예시 참고)
 ### 2-1. API 개요
-### 2-2. 요청(Request)  - Headers / 본문 필드 / 쿼리 파라미터
-### 2-3. 응답(Response) - 성공 / 실패
+
+| 항목 | 내용 |
+|---|---|
+| API 이름 | 회원가입 API |
+| 설명 | 사내 의료인, 개발 실무진, 연구진이 회원가입을 한다. 가입 직후 권한은 `PENDING`(대기자)이다. |
+| 엔드포인트 | `/api/v1/users/signup` |
+| 메서드 | `POST` |
+| 인증 필요 여부 | N |
+| 요구사항 | REQ-USER-001 |
+
+### 2-2. 요청(Request)
+
+**Headers**
+
+| Key | Value | 설명 |
+|---|---|---|
+| Content-Type | application/json | 요청 본문 형식 |
+
+**본문 필드**
+
+| 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| email | string | Y | 이메일 (이메일 형식, 최대 255자, 중복 불가) |
+| password | string | Y | 비밀번호 (8~20자, 영문·숫자·특수문자 각 1개 이상) |
+| name | string | Y | 이름 (1~20자) |
+| department | string | Y | 부서 (`MEDICAL`, `DEV`, `RESEARCH`) |
+| gender | string | Y | 성별 (`M`, `F`) |
+| phone_number | string | Y | 휴대폰 번호 (숫자만 10~11자리, 중복 불가) |
+
+```json
+{
+  "email": "doctor@example.com",
+  "password": "Password1!",
+  "name": "홍길동",
+  "department": "MEDICAL",
+  "gender": "M",
+  "phone_number": "01012345678"
+}
+```
+
+**쿼리 파라미터**
+
+| 쿼리 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| 없음 | - | - | 쿼리 파라미터를 사용하지 않음 |
+
+### 2-3. 응답(Response)
+
+**성공: 201 Created**
+
+```json
+{
+  "id": 1,
+  "email": "doctor@example.com",
+  "name": "홍길동",
+  "department": "MEDICAL",
+  "gender": "M",
+  "phone_number": "01012345678",
+  "role": "PENDING",
+  "is_active": true
+}
+```
+
+| 필드명 | 타입 | 설명 |
+|---|---|---|
+| id | integer | 사용자 고유 ID |
+| email | string | 이메일 |
+| name | string | 이름 |
+| department | string | 부서 |
+| gender | string | 성별 |
+| phone_number | string | 휴대폰 번호 |
+| role | string | 권한 (가입 직후 `PENDING`) |
+| is_active | boolean | 계정 활성화 여부 (가입 직후 `true`) |
+
+- 응답 형식은 `UserResponse`(1-5 참고)와 같다.
+
+**실패**
+
+- 409 Conflict: 이미 가입된 이메일인 경우
+
+```json
+{
+  "detail": "이미 사용 중인 이메일입니다."
+}
+```
+
+- 409 Conflict: 이미 가입된 휴대폰 번호인 경우
+
+```json
+{
+  "detail": "이미 사용 중인 휴대폰 번호입니다."
+}
+```
+
+- 422 Unprocessable Entity: 필수 값 누락, 이메일·비밀번호·휴대폰 번호 형식 오류 (1-6 참고)
+
 ### 2-4. 비고
--->
+
+- 비밀번호는 argon2로 해싱해서 `hashed_password`에 저장하고, 응답에는 포함하지 않는다.
+- 권한(`role`)은 요청으로 받지 않고 서버에서 `PENDING`으로 저장한다. 사용자가 스스로 `ADMIN`으로 가입하는 것을 막기 위해서다.
+- 회원가입 후 자동 로그인은 하지 않는다. 토큰은 로그인 API(3번)에서 발급받는다.
 
 ---
 
@@ -645,8 +740,70 @@ REQ-USER-008 참고
 
 ## 11. 회원 탈퇴 (담당: 장성은)
 
-<!--
-REQ-USER-009 참고
-- 회원 정보를 DB에서 즉시 삭제 (Hard Delete)
-- 성공 시 응답 코드, 리프레시 토큰 쿠키 처리 등
--->
+### 11-1. API 개요
+
+| 항목 | 내용 |
+|---|---|
+| API 이름 | 회원 탈퇴 API |
+| 설명 | 로그인한 사용자가 마이페이지에서 회원 탈퇴를 한다. 회원 정보는 DB에서 즉시 삭제된다. |
+| 엔드포인트 | `/api/v1/users/me` |
+| 메서드 | `DELETE` |
+| 인증 필요 여부 | Y |
+| 요구사항 | REQ-USER-009 |
+
+### 11-2. 요청(Request)
+
+**Headers**
+
+| Key | Value | 설명 |
+|---|---|---|
+| Authorization | `Bearer <access_token>` | 로그인 시 발급받은 액세스 토큰 |
+
+**본문 필드**
+
+| 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| 없음 | - | - | 요청 본문을 사용하지 않음 |
+
+**쿼리 파라미터**
+
+| 쿼리 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| 없음 | - | - | 쿼리 파라미터를 사용하지 않음 |
+
+### 11-3. 응답(Response)
+
+**성공: 204 No Content**
+
+- 응답 본문 없음
+
+**응답 Headers**
+
+| Key | 예시 값 | 설명 |
+|---|---|---|
+| Set-Cookie | `refresh_token=""; Max-Age=0; Path=/api/v1/auth` | 리프레시 토큰 쿠키 삭제 |
+
+**실패**
+
+- 401 Unauthorized: 토큰이 없거나, 만료되었거나, 위조된 경우
+
+```json
+{
+  "detail": "인증 정보가 유효하지 않습니다."
+}
+```
+
+- 403 Forbidden: 비활성화된 계정인 경우
+
+```json
+{
+  "detail": "비활성화된 사용자입니다."
+}
+```
+
+### 11-4. 비고
+
+- 회원 정보는 DB에서 바로 삭제한다. (Hard Delete)
+- 모든 권한(`PENDING` 포함)이 탈퇴할 수 있다.
+- 탈퇴 후에는 리프레시 토큰 쿠키도 삭제한다. 쿠키를 지울 때는 로그아웃(5번)과 같은 `Path`(`/api/v1/auth`)를 줘야 지워진다.
+- 탈퇴 전에 발급된 액세스 토큰으로 요청하면, 토큰 주인이 DB에 없으므로 401을 돌려준다.
