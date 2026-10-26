@@ -60,7 +60,18 @@ class UserResponse(BaseModel):
 
 
 # ===== Signup / Withdraw (담당: 장성은) =====
-# 예: class SignupRequest(BaseModel): email: EmailStr, password: Password, name: UserName, ...
+from pydantic import EmailStr
+
+
+class SignupRequest(BaseModel):
+    # 회원가입 요청 본문 (명세 2-2)
+    email: Annotated[EmailStr, Field(max_length=255)]
+    password: Password
+    name: UserName
+    department: Department
+    gender: Gender
+    phone_number: PhoneNumber
+    # role은 받지 않는다 → 서버에서 PENDING으로 저장 (명세 2-4)
 
 
 # ===== My Page (담당: 김민준) =====
