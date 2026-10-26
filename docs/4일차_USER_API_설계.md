@@ -749,8 +749,8 @@ GET /api/v1/users?keyword=홍길동&department=MEDICAL&page=1&size=20
 
 | HTTP Status | 발생 상황 |
 |---|---|
-| 401 Unauthorized | Access Token이 없거나 유효하지 않은 경우 |
-| 404 Not Found | 인증된 사용자 계정이 DB에 존재하지 않는 경우 |
+| 401 Unauthorized | Access Token이 없거나 유효하지 않거나 인증된 사용자 계정이 DB에 존재하지 않는 경우 |
+| 403 Forbidden | 인증된 사용자 계정이 비활성화된 경우 |
 
 ### 처리 흐름
 
@@ -828,8 +828,8 @@ GET /api/v1/users?keyword=홍길동&department=MEDICAL&page=1&size=20
 
 | HTTP Status | 발생 상황 |
 |---|---|
-| 401 Unauthorized | Access Token이 없거나 유효하지 않은 경우 |
-| 404 Not Found | 인증된 사용자 계정이 DB에 존재하지 않는 경우 |
+| 401 Unauthorized | Access Token이 없거나 유효하지 않거나 인증된 사용자 계정이 DB에 존재하지 않는 경우 |
+| 403 Forbidden | 인증된 사용자 계정이 비활성화된 경우 |
 | 409 Conflict | 변경하려는 휴대폰 번호를 다른 회원이 사용 중인 경우 |
 | 422 Unprocessable Content | 부서·휴대폰 번호 형식이 잘못되었거나 유효하지 않은 요청인 경우 |
 
@@ -907,8 +907,8 @@ GET /api/v1/users?keyword=홍길동&department=MEDICAL&page=1&size=20
 | HTTP Status | 발생 상황 |
 |---|---|
 | 400 Bad Request | 기존 비밀번호가 일치하지 않거나 새 비밀번호가 기존 비밀번호와 같은 경우 |
-| 401 Unauthorized | Access Token이 없거나 유효하지 않은 경우 |
-| 404 Not Found | 인증된 사용자 계정이 DB에 존재하지 않는 경우 |
+| 401 Unauthorized | Access Token이 없거나 유효하지 않거나 인증된 사용자 계정이 DB에 존재하지 않는 경우 |
+| 403 Forbidden | 인증된 사용자 계정이 비활성화된 경우 |
 | 422 Unprocessable Content | 필수 항목 누락, 비밀번호 형식 또는 공통 정책 위반 |
 
 ### 처리 흐름
