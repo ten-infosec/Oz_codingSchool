@@ -19,7 +19,7 @@
 | 3 | 토큰 재발급 | POST | `/api/v1/auth/token/refresh` | 쿠키 | - | NFR-USER-001 | 엄태은 |
 | 4 | 로그아웃 | POST | `/api/v1/auth/logout` | N | - | REQ-USER-003 | 엄태은 |
 | 5 | 회원 목록 조회 | GET | `/api/v1/users` | Y | ADMIN | REQ-USER-004 | 여현지 |
-| 6 | 회원 권한 변경 | PATCH | `/api/v1/users/{user_id}/role` | Y | ADMIN | REQ-USER-005 | 여현지 |
+| 6 | 회원 권한 변경 (여러 명 일괄) | PATCH | `/api/v1/users/role` | Y | ADMIN | REQ-USER-005 | 여현지 |
 | 7 | 마이페이지 조회 | GET | `/api/v1/users/me` | Y | 전체 | REQ-USER-006 | 김민준 |
 | 8 | 회원 정보 수정 | PATCH | `/api/v1/users/me` | Y | 전체 | REQ-USER-007 | 김민준 |
 | 9 | 비밀번호 변경 | PATCH | `/api/v1/users/me/password` | Y | 전체 | REQ-USER-008 | 김민준 |
