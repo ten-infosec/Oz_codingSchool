@@ -7,11 +7,16 @@ from starlette.responses import FileResponse
 
 # practice_apis.py에서 만든 router를 가져온다
 from app.apis.practice_apis import router as practice_router
+# 4일차 User API 라우터
+from app.apis.auth import router as auth_router
+from app.apis.users import router as users_router
 
 app = FastAPI()
 
 # practice 라우터 등록 (맨 아래 catch_all보다 반드시 위에 있어야 함)
 app.include_router(practice_router)
+app.include_router(auth_router)
+app.include_router(users_router)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
