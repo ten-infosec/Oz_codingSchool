@@ -20,7 +20,8 @@ from app import models
 config = context.config
 
 # Alembic 설정 파일의 sqlalchemy.url을 우리 앱의 DATABASE_URL로 덮어씁니다.
-config.set_main_option("sqlalchemy.url", DATABASE_URL)
+# alembic 설정은 %를 특수 기호로 해석하므로, URL 인코딩으로 생긴 %는 %%로 바꿔서 넘긴다
+config.set_main_option("sqlalchemy.url", DATABASE_URL.replace("%", "%%"))
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
