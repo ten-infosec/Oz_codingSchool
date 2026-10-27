@@ -114,17 +114,32 @@ class MessageResponse(BaseModel):
 # ===== Admin (담당: 여현지) =====
 # REQ-USER-004 회원 목록 조회, REQ-USER-005 회원 권한 변경
 # 템플릿 화면(static/apis.js) 약속: GET /admin/users?query=&department= → 배열, PATCH /admin/users/role {user_id, new_role}
-
+from pydantic import field_validator
 
 class UserListQuery(BaseModel):
     # GET /api/v1/admin/users 쿼리 파라미터
+    # 응답은 UserResponse 배열(list[UserResponse])이라 별도 응답 스키마는 만들지 않는다
+    # 앞뒤 공백은 지운다 (공백만 보내면 빈 문자열이 되어 필터로 걸리지 않게 아래에서 None 처리)
+    model_config = ConfigDict(str_strip_whitespace=True)
+
     query: str | None = Field(default=None, max_length=100)  # 이메일 또는 이름 검색
     department: Department | None = None  # 부서 필터 (미입력 시 전체)
     page: int = Field(default=1, ge=1)
     size: int = Field(default=100, ge=1, le=100)
 
+    @field_validator("query")
+    @classmethod
+    def _empty_query_to_none(cls, value: str | None) -> str | None:
+        # ?query= 처럼 빈 값으로 오면 검색어 없음으로 취급
+        return value or None
 
 class RoleUpdateRequest(BaseModel):
     # PATCH /api/v1/admin/users/role 요청 본문
+    # extra="forbid": 정해진 두 칸 외의 값(예: is_active)을 보내면 422
+    model_config = ConfigDict(extra="forbid")
+
     user_id: int  # 권한을 변경할 회원 ID
     new_role: Role  # pending / staff / admin
+
+# 권한 변경 응답은 변경이 반영된 UserResponse를 그대로 돌려준다 (response_model=UserResponse)
+# 화면이 바뀐 role을 바로 목록에 반영할 수 있다

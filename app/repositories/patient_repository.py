@@ -15,7 +15,36 @@ async def get_by_id(db: AsyncSession, patient_id: int) -> Patient | None:
 
 
 # ===== List (담당: 여현지) =====
-# 예: async def get_list(db, name, gender, min_age, max_age) -> list[Patient]
+from sqlalchemy import select
+
+from app.models.enums import Gender
+
+
+async def get_list(
+    db: AsyncSession,
+    name: str | None = None,
+    gender: Gender | None = None,
+    min_age: int | None = None,
+    max_age: int | None = None,
+) -> list[Patient]:
+    # 조건은 모두 AND로 결합한다 (명세 3-4). 값이 없는 조건은 걸지 않는다.
+    stmt = select(Patient)
+
+    if name:
+        # 이름 부분 일치. autoescape: 검색어의 %, _ 를 일반 문자로 취급
+        stmt = stmt.where(Patient.name.contains(name, autoescape=True))
+    if gender:
+        stmt = stmt.where(Patient.gender == gender)
+    if min_age is not None:
+        stmt = stmt.where(Patient.age >= min_age)  # 이상
+    if max_age is not None:
+        stmt = stmt.where(Patient.age <= max_age)  # 이하
+
+    # 최신 등록 순 (명세 3-4)
+    stmt = stmt.order_by(Patient.id.desc())
+
+    result = await db.scalars(stmt)
+    return list(result.all())
 
 
 # ===== Update (담당: 엄태은) =====
