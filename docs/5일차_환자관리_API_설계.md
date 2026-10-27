@@ -14,16 +14,19 @@
 
 ## 0. API 목록
 
+- `#` 번호는 아래 본문 섹션 번호와 같다. (1번은 공통 규칙)
+
 | # | 기능 | 메서드 | 엔드포인트 | 권한 | 요구사항 | 담당 |
 |---|---|---|---|---|---|---|
-| 1 | 환자 정보 등록 | POST | `/api/v1/patients` | 의료인 | REQ-PTNT-001 | 장성은 |
-| 2 | 환자 목록 조회 | GET | `/api/v1/patients` | 스태프 이상 | REQ-PTNT-002 | 여현지 |
-| 3 | 환자 정보 상세 조회 | GET | `/api/v1/patients/{patient_id}` | 스태프 이상 | REQ-PTNT-003 | 여현지 |
-| 4 | 환자 정보 수정 | PATCH | `/api/v1/patients/{patient_id}` | 스태프 이상 | REQ-PTNT-004 | 엄태은 |
-| 5 | 환자 정보 삭제 | DELETE | `/api/v1/patients/{patient_id}` | 스태프 이상 | REQ-PTNT-005 | 장성은 |
-| 6 | 진료기록 등록 | POST | `/api/v1/medical-records` | 의료인 | REQ-MDR-001 | 엄태은 |
-| 7 | 진료기록 목록 조회 | GET | `/api/v1/patients/{patient_id}/medical-records` | 스태프 이상 | REQ-MDR-002 | 엄태은 |
-| 8 | 진료기록 상세 조회 | GET | `/api/v1/medical-records/{record_id}` | 스태프 이상 | REQ-MDR-003 | 엄태은 |
+| 1 | 공통 규칙 | - | - | - | NFR-PTNT-001, NFR-MDR-001 | 엄태은 |
+| 2 | 환자 정보 등록 | POST | `/api/v1/patients` | 의료인 | REQ-PTNT-001 | 장성은 |
+| 3 | 환자 목록 조회 | GET | `/api/v1/patients` | 스태프 이상 | REQ-PTNT-002 | 여현지 |
+| 4 | 환자 정보 상세 조회 | GET | `/api/v1/patients/{patient_id}` | 스태프 이상 | REQ-PTNT-003 | 여현지 |
+| 5 | 환자 정보 수정 | PATCH | `/api/v1/patients/{patient_id}` | 스태프 이상 | REQ-PTNT-004 | 엄태은 |
+| 6 | 환자 정보 삭제 | DELETE | `/api/v1/patients/{patient_id}` | 스태프 이상 | REQ-PTNT-005 | 장성은 |
+| 7 | 진료기록 등록 | POST | `/api/v1/medical-records` | 의료인 | REQ-MDR-001 | 엄태은 |
+| 8 | 진료기록 목록 조회 | GET | `/api/v1/patients/{patient_id}/medical-records` | 스태프 이상 | REQ-MDR-002 | 엄태은 |
+| 9 | 진료기록 상세 조회 | GET | `/api/v1/medical-records/{record_id}` | 스태프 이상 | REQ-MDR-003 | 엄태은 |
 
 ---
 
@@ -45,7 +48,7 @@
 | 스태프 이상 | 권한이 `staff` 또는 `admin`인 사용자 | 4일차 규칙: `pending`(대기자)은 마이페이지 외 모든 서비스 접근 불가 |
 | 의료인 | 부서가 `medical team`이고 권한이 `staff` 이상인 사용자, 또는 `admin` | REQ-PTNT-001, REQ-MDR-001: "사내 의료인 역할을 가진 유저" |
 
-- 환자 등록(1번)과 진료기록 등록(6번)만 **의료인** 권한이 필요하다.
+- 환자 등록(2번)과 진료기록 등록(7번)만 **의료인** 권한이 필요하다.
 - 나머지는 요구사항에 "사내 개발진, 의료 실무진, 연구진"으로 되어 있어 **스태프 이상**이면 부서와 관계없이 허용한다.
 
 ### 1-3. 공통 값 형식
@@ -136,15 +139,15 @@
 |---|---|---|---|
 | name | string | Y | 환자 이름 (1~30자) |
 | age | integer | Y | 나이 (0~150) |
-| gender | string | Y | 성별 (`M`, `F`) |
-| phone | string | Y | 연락처 (숫자만 10~11자리) |
+| gender | string | Y | 성별 (`male`, `female`) |
+| phone_number | string | Y | 연락처 (숫자만 10~11자리) |
 
 ```json
 {
   "name": "홍길동",
   "age": 45,
-  "gender": "M",
-  "phone": "01012345678"
+  "gender": "male",
+  "phone_number": "01012345678"
 }
 ```
 
@@ -163,8 +166,8 @@
   "id": 1,
   "name": "홍길동",
   "age": 45,
-  "gender": "M",
-  "phone": "01012345678",
+  "gender": "male",
+  "phone_number": "01012345678",
   "created_at": "2026-10-27T15:30:00",
   "updated_at": "2026-10-27T15:30:00"
 }
@@ -182,7 +185,7 @@
 }
 ```
 
-- 403 Forbidden: 의료인이 아닌 경우 (대기자, MEDICAL 부서가 아닌 STAFF)
+- 403 Forbidden: 의료인이 아닌 경우 (대기자, `medical team` 부서가 아닌 staff)
 
 ```json
 {
@@ -194,7 +197,8 @@
 
 ### 2-4. 비고
 
-- 의료인 판단 기준은 1-2를 따른다. (MEDICAL 부서 + STAFF 이상, 또는 ADMIN)
+- 의료인 판단 기준은 1-2를 따른다. (`medical team` 부서 + `staff`, 또는 `admin`)
+- 요청은 화면 이름 `phone_number`로 받고, DB에는 `patients.phone` 칸에 저장한다. 성별은 `male`/`female`로 받고 DB에는 `M`/`F`로 저장한다.
 - 등록 직후에는 `created_at`과 `updated_at`이 같은 값이다.
 
 ---
@@ -424,13 +428,101 @@ GET /api/v1/patients/1
 
 ## 5. 환자 정보 수정 (담당: 엄태은)
 
-<!--
-REQ-PTNT-004 참고
-- 권한: 스태프 이상
-- 부분 수정(Partial): name, phone_number 중 보낸 항목만 수정 (화면은 두 칸을 함께 보냄)
-- 둘 다 안 보낸 경우 처리 방법도 정해 주세요
-- 없는 환자: 404
--->
+### 5-1. API 개요
+
+| 항목 | 내용 |
+|---|---|
+| API 이름 | 환자 정보 수정 API |
+| 설명 | 환자 관리 메뉴의 상세 화면에서 환자의 이름과 연락처를 수정한다. |
+| 엔드포인트 | `/api/v1/patients/{patient_id}` |
+| 메서드 | `PATCH` |
+| 인증 필요 여부 | Y (스태프 이상) |
+| 요구사항 | REQ-PTNT-004 |
+
+### 5-2. 요청(Request)
+
+**Headers**
+
+| Key | Value | 설명 |
+|---|---|---|
+| Authorization | `Bearer <access_token>` | 액세스 토큰 |
+| Content-Type | application/json | 요청 본문 형식 |
+
+**경로 파라미터**
+
+| 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| patient_id | integer | Y | 수정할 환자 고유 ID |
+
+**본문 필드** (보낸 항목만 수정)
+
+| 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| name | string | N | 변경할 이름 (1~30자) |
+| phone_number | string | N | 변경할 연락처 (숫자만 10~11자리) |
+
+```json
+{
+  "name": "홍길순",
+  "phone_number": "01099998888"
+}
+```
+
+**쿼리 파라미터**: 없음
+
+### 5-3. 응답(Response)
+
+**성공: 200 OK**
+
+```json
+{
+  "id": 1,
+  "name": "홍길순",
+  "age": 45,
+  "gender": "male",
+  "phone_number": "01099998888",
+  "created_at": "2026-10-27T15:30:00",
+  "updated_at": "2026-10-27T16:10:00"
+}
+```
+
+- 수정이 끝난 환자 정보 (`PatientResponse`, 1-4 참고)
+
+**실패**
+
+- 400 Bad Request: 수정할 항목을 하나도 보내지 않은 경우 (`{}`)
+
+```json
+{
+  "detail": "수정할 항목(이름, 연락처)을 하나 이상 보내 주세요."
+}
+```
+
+- 401 Unauthorized: 토큰이 없거나 유효하지 않은 경우
+- 403 Forbidden: 대기자(`pending`)인 경우
+
+```json
+{
+  "detail": "접근 권한이 없습니다."
+}
+```
+
+- 404 Not Found: 환자가 없는 경우
+
+```json
+{
+  "detail": "환자를 찾을 수 없습니다."
+}
+```
+
+- 422 Unprocessable Entity: 이름·연락처 형식 오류, 또는 수정할 수 없는 항목(`age`, `gender` 등)을 보낸 경우 (1-6 참고)
+
+### 5-4. 비고
+
+- 요구사항(REQ-PTNT-004)의 수정 항목은 이름과 연락처뿐이다. 나이·성별을 보내면 422로 막는다. (`extra="forbid"`)
+- 화면(`pages.js`)은 두 칸을 함께 보내지만, 한 칸만 보내도 그 칸만 수정한다. (부분 수정이므로 `PUT`이 아닌 `PATCH`)
+- 요청은 화면 이름 `phone_number`로 받고, DB에는 `patients.phone` 칸에 저장한다.
+- 수정하면 `updated_at`이 DB에서 자동으로 현재 시각으로 바뀐다.
 
 ---
 
@@ -489,7 +581,7 @@ REQ-PTNT-004 참고
 }
 ```
 
-- 403 Forbidden: 대기자(`PENDING`)인 경우
+- 403 Forbidden: 대기자(`pending`)인 경우
 
 ```json
 {
@@ -546,7 +638,7 @@ REQ-PTNT-004 참고
 | chart_number | string | Y | 진료 차트 넘버 (1~50자, 중복 불가) |
 | symptoms | string | Y | 진료된 증상 |
 | xray_image | file | Y | 흉부 X-ray 이미지 (`jpeg`, `png`, 최대 10MB) |
-| shooting_datetime | string | N | X-ray 촬영 일시 (ISO 8601). 생략하면 업로드 시각으로 저장 |
+| shooting_datetime | string | N | X-ray 촬영 일시 (ISO 8601). 생략하면 업로드 시각으로 저장. 시간대(예: 끝의 `Z`)가 붙어 오면 한국 시간으로 바꿔 저장 |
 
 **경로 파라미터 / 쿼리 파라미터**: 없음
 
@@ -627,20 +719,93 @@ REQ-PTNT-004 참고
 - 폼 칸을 Pydantic 모델(`Form()`)로 묶고 파일을 따로 받으면 FastAPI가 422(`body.form` missing)를 낸다. 칸마다 `Form()`으로 받거나, 파일까지 모델 안에 넣는다.
 - 업로드한 이미지의 미리보기는 화면(프론트엔드)에서 처리한다. 서버는 저장 후 `xray_image_url`을 돌려준다.
 - 저장 순서: 검증 → 파일 저장 → DB 저장. DB 저장이 실패하면 방금 저장한 파일을 지워 남는 파일이 없게 한다.
+- 촬영일시에 시간대가 붙어 오면(Swagger는 `2026-10-27T08:07:15Z`처럼 UTC로 보냄) 서버 시간대(한국 시간)로 바꾼 뒤 저장한다. `created_at`과 기준을 맞춰 9시간 차이가 나지 않게 하기 위해서다.
 - 요구사항상 진료기록 1건에 이미지 1장이다. DB 구조(`xray_images.record_id`)는 여러 장을 허용하지만, 응답에는 첫 번째 이미지 주소만 `xray_image_url`로 돌려준다.
 
 ---
 
 ## 8. 진료기록 목록 조회 (담당: 엄태은)
 
-<!--
-REQ-MDR-002 참고
-- 권한: 스태프 이상
-- 경로 파라미터: patient_id (없는 환자: 404)
-- 응답: **배열** [ {id, chart_number, symptoms, created_at} ] (화면이 records.map으로 사용)
-- 증상: 100자 초과 시 앞 100자 + "…"
-- 정렬 순서(최신순 등)도 정해 주세요
--->
+### 8-1. API 개요
+
+| 항목 | 내용 |
+|---|---|
+| API 이름 | 진료기록 목록 조회 API |
+| 설명 | 환자 상세 화면에서 해당 환자의 진료기록 목록(차트 넘버, 증상 요약, 등록일시)을 조회한다. |
+| 엔드포인트 | `/api/v1/patients/{patient_id}/medical-records` |
+| 메서드 | `GET` |
+| 인증 필요 여부 | Y (스태프 이상) |
+| 요구사항 | REQ-MDR-002 |
+
+### 8-2. 요청(Request)
+
+**Headers**
+
+| Key | Value | 설명 |
+|---|---|---|
+| Authorization | `Bearer <access_token>` | 액세스 토큰 |
+
+**경로 파라미터**
+
+| 파라미터명 | 타입 | 필수 | 설명 |
+|---|---|---|---|
+| patient_id | integer | Y | 환자 고유 ID |
+
+**본문 필드 / 쿼리 파라미터**: 없음
+
+### 8-3. 응답(Response)
+
+**성공: 200 OK**
+
+```json
+[
+  {
+    "id": 11,
+    "chart_number": "CH-20261027-002",
+    "symptoms": "기침이 2주째 계속되고 밤에 심해짐. 가래에 피가 섞여 나온 적이 있고, 계단을 오를 때 숨이 차며 미열(37.5도)이 반복됨. 최근 한 달 사이 체중이 3kg 줄었고 식은땀이 남…",
+    "created_at": "2026-10-27T16:00:00"
+  },
+  {
+    "id": 10,
+    "chart_number": "CH-20261027-001",
+    "symptoms": "3일 전부터 기침과 38도 발열, 호흡 시 흉통",
+    "created_at": "2026-10-27T15:30:00"
+  }
+]
+```
+
+| 필드명 | 타입 | 설명 |
+|---|---|---|
+| [] | array | 진료기록 목록 |
+| [].id | integer | 진료기록 ID (상세 조회 9번에 사용) |
+| [].chart_number | string | 진료 차트 넘버 |
+| [].symptoms | string | 증상. 100자를 넘으면 앞 100자 + `…` |
+| [].created_at | string | 등록일시 |
+
+진료기록이 없는 환자는 200 OK와 함께 빈 배열을 돌려준다.
+
+```json
+[]
+```
+
+**실패**
+
+- 401 Unauthorized: 토큰이 없거나 유효하지 않은 경우
+- 403 Forbidden: 대기자(`pending`)인 경우
+- 404 Not Found: 환자가 없는 경우
+
+```json
+{
+  "detail": "환자를 찾을 수 없습니다."
+}
+```
+
+### 8-4. 비고
+
+- 화면(`pages.js`)이 응답을 배열로 받아 `records.map`으로 표를 그리므로 감싸는 객체 없이 배열을 돌려준다.
+- 정렬은 `id` 내림차순(최신 등록 순)이다.
+- 목록에서는 증상을 줄여서 보여 주고, 전체 증상은 상세 조회(9번)에서 확인한다.
+- 없는 환자는 빈 배열이 아니라 404를 돌려준다. 빈 배열은 "환자는 있지만 진료기록이 없음"을 뜻하도록 구분하기 위해서다.
 
 ---
 
