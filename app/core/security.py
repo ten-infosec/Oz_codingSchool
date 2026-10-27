@@ -36,7 +36,7 @@ TokenType = Literal["access", "refresh"]
 
 # 리프레시 토큰을 담는 쿠키 이름과 경로 (인증 API에서만 쿠키가 전송되도록 경로 제한)
 REFRESH_COOKIE_NAME = "refresh_token"
-REFRESH_COOKIE_PATH = "/api/v1/auth"
+REFRESH_COOKIE_PATH = "/api/v1/users"
 
 
 def _create_token(user_id: int, token_type: TokenType, expires_delta: timedelta) -> str:

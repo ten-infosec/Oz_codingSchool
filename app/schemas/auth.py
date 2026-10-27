@@ -1,15 +1,9 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 
 from app.schemas.user import UserResponse
 
 
 # ===== Auth Schemas (담당: 엄태은) =====
-
-
-class LoginRequest(BaseModel):
-    email: EmailStr
-    # 로그인은 형식 검사 없이 받는다 (규칙 위반 비밀번호도 "틀림"으로 처리하기 위해)
-    password: str
 
 
 class TokenResponse(BaseModel):
