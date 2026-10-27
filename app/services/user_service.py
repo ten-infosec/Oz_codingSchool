@@ -56,57 +56,72 @@ async def withdraw(db: AsyncSession, user: User) -> None:
 
 
 # ===== My Page (담당: 김민준) =====
-# - 정보 수정: 보낸 값만 수정 (model_dump(exclude_unset=True)), 휴대폰 중복이면 409
-# - 비밀번호 변경: verify_password로 기존 비밀번호 확인 후 hash_password로 저장
+# 민준님 명세 기준 (민준님 결석으로 태은 대신 작성)
+from app.schemas.user import PasswordChangeRequest, UserUpdateRequest
+
+
+async def update_me(db: AsyncSession, user: User, body: UserUpdateRequest) -> User:
+    # exclude_unset=True: 요청에 실제로 들어온 항목만 꺼낸다 (부분 수정)
+    values = body.model_dump(exclude_unset=True)
+
+    # 다른 회원이 이미 쓰는 휴대폰 번호면 409 (본인 번호 그대로 보낸 경우는 통과)
+    new_phone = values.get("phone_number")
+    if new_phone and new_phone != user.phone_number:
+        if await user_repository.get_by_phone_number(db, new_phone) is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="이미 사용 중인 휴대폰 번호입니다.",
+            )
+
+    return await user_repository.update(db, user, values)
+
+
+async def change_password(db: AsyncSession, user: User, body: PasswordChangeRequest) -> None:
+    # 1) 현재 비밀번호 확인
+    if user.hashed_password is None or not verify_password(body.current_password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="현재 비밀번호가 일치하지 않습니다.",
+        )
+    # 2) 새 비밀번호는 기존과 달라야 한다
+    if body.current_password == body.new_password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="새 비밀번호는 현재 비밀번호와 달라야 합니다.",
+        )
+    # 3) 해싱해서 저장
+    await user_repository.update_password(db, user, hash_password(body.new_password))
 
 
 # ===== Admin (담당: 여현지) =====
-# - 목록 조회: 이메일·이름 검색, 부서 필터
-# - 권한 변경: 대상이 없으면 404
-from app.schemas.user import (
-    RoleUpdateRequest,
-    RoleUpdateResponse,
-    UserListQuery,
-    UserListResponse,
-    UserResponse,
-)
+from app.schemas.user import RoleUpdateRequest, UserListQuery
 
-async def get_users(db: AsyncSession, query: UserListQuery) -> UserListResponse:
+
+async def get_users(db: AsyncSession, query: UserListQuery) -> list[User]:
     # 페이지 번호를 DB 조회용 offset으로 변환
     offset = (query.page - 1) * query.size
-
-    users, total = await user_repository.get_list(
+    return await user_repository.get_list(
         db,
-        keyword=query.keyword,
+        keyword=query.query,
         department=query.department,
         offset=offset,
         limit=query.size,
     )
 
-    return UserListResponse(
-        total=total,
-        page=query.page,
-        size=query.size,
-        items=[UserResponse.model_validate(user) for user in users],
-    )
 
-
-async def update_roles(db: AsyncSession, body: RoleUpdateRequest) -> RoleUpdateResponse:
-    users = await user_repository.get_by_ids(db, body.user_ids)
-
-    # 조회된 수가 요청한 수보다 적으면 존재하지 않는 ID가 섞여 있다는 뜻
-    # (RoleUpdateRequest에서 중복 ID를 이미 제거했기 때문에 개수 비교가 정확하다)
-    if len(users) != len(body.user_ids):
+async def update_role(db: AsyncSession, admin: User, body: RoleUpdateRequest) -> User:
+    # 관리자 본인의 권한은 바꿀 수 없다 (관리자가 0명이 되는 상황 방지, 화면도 본인 행은 비활성화)
+    if body.user_id == admin.id:
         raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="존재하지 않는 사용자가 포함되어 있습니다.",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="본인의 권한은 변경할 수 없습니다.",
         )
 
-    users = await user_repository.update_roles(db, users, body.role)
-    await db.commit()   # TODO: 팀 commit 방식에 맞춰 조정
+    user = await user_repository.get_by_id(db, body.user_id)
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="사용자를 찾을 수 없습니다.",
+        )
 
-    return RoleUpdateResponse(
-        updated_count=len(users),
-        role=body.role,
-        users=[UserResponse.model_validate(user) for user in users],
-    )
+    return await user_repository.update_role(db, user, body.new_role)

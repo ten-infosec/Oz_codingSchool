@@ -14,16 +14,21 @@ _PASSWORD_SPECIAL = re.compile(r"[!@#$%^&*()_+\-=\[\]{};':\"\\|,.<>/?`~]")
 _PHONE_PATTERN = re.compile(r"^\d{10,11}$")
 
 
+# 템플릿 화면(static/apis.js)이 이 문장을 그대로 찾아서 보여 주므로 글자 하나도 바꾸지 않는다
+PASSWORD_RULE_MESSAGE = "비밀번호는 대소문자, 특수문자, 숫자를 각 1개씩 포함한 8자리 이상이어야 합니다."
+
+
 def _check_password(value: str) -> str:
-    # 8~20자, 영문·숫자·특수문자 각 1개 이상
-    if not 8 <= len(value) <= 20:
-        raise ValueError("비밀번호는 8~20자여야 합니다.")
-    if not re.search(r"[A-Za-z]", value):
-        raise ValueError("비밀번호에 영문이 1개 이상 포함되어야 합니다.")
-    if not re.search(r"\d", value):
-        raise ValueError("비밀번호에 숫자가 1개 이상 포함되어야 합니다.")
-    if not _PASSWORD_SPECIAL.search(value):
-        raise ValueError("비밀번호에 특수문자가 1개 이상 포함되어야 합니다.")
+    # 8~64자, 영문 대문자·소문자·숫자·특수문자 각 1개 이상
+    # (64자 상한: 너무 긴 비밀번호로 해싱에 시간을 쓰게 만드는 요청을 막기 위해)
+    if not (
+        8 <= len(value) <= 64
+        and re.search(r"[A-Z]", value)
+        and re.search(r"[a-z]", value)
+        and re.search(r"\d", value)
+        and _PASSWORD_SPECIAL.search(value)
+    ):
+        raise ValueError(PASSWORD_RULE_MESSAGE)
     return value
 
 
@@ -75,44 +80,51 @@ class SignupRequest(BaseModel):
 
 
 # ===== My Page (담당: 김민준) =====
-# 예: class UserUpdateRequest(BaseModel): department: Department | None = None, phone_number: PhoneNumber | None = None
-#     class PasswordChangeRequest(BaseModel): current_password: str, new_password: Password
+# 민준님 명세(4일차 문서 8~10번) 기준으로 작성 (민준님 결석으로 태은 대신 작성)
+from pydantic import model_validator
+
+
+class UserUpdateRequest(BaseModel):
+    # PATCH /api/v1/users/me 요청 본문 (보낸 항목만 수정)
+    # extra="forbid": 이름·이메일·권한처럼 수정할 수 없는 항목을 보내면 422
+    model_config = ConfigDict(extra="forbid")
+
+    department: Department | None = None
+    phone_number: PhoneNumber | None = None
+
+    @model_validator(mode="after")
+    def _at_least_one(self):
+        # 변경 항목이 하나도 없으면 422 (명세 9번)
+        if self.department is None and self.phone_number is None:
+            raise ValueError("수정할 항목(부서, 휴대폰 번호)을 하나 이상 보내 주세요.")
+        return self
+
+
+class PasswordChangeRequest(BaseModel):
+    # PATCH /api/v1/users/me/password 요청 본문 (템플릿 화면도 같은 이름으로 보냄)
+    current_password: str
+    new_password: Password
+
+
+class MessageResponse(BaseModel):
+    message: str
 
 
 
 # ===== Admin (담당: 여현지) =====
 # REQ-USER-004 회원 목록 조회, REQ-USER-005 회원 권한 변경
+# 템플릿 화면(static/apis.js) 약속: GET /admin/users?query=&department= → 배열, PATCH /admin/users/role {user_id, new_role}
 
-from pydantic import field_validator
 
 class UserListQuery(BaseModel):
-    # GET /api/v1/users 쿼리 파라미터
-    keyword: str | None = Field(default=None, max_length=100)  # 이메일 또는 이름 검색
+    # GET /api/v1/admin/users 쿼리 파라미터
+    query: str | None = Field(default=None, max_length=100)  # 이메일 또는 이름 검색
     department: Department | None = None  # 부서 필터 (미입력 시 전체)
     page: int = Field(default=1, ge=1)
-    size: int = Field(default=20, ge=1, le=100)
-
-class UserListResponse(BaseModel):
-    # GET /api/v1/users 응답
-    total: int  # 검색·필터 조건에 해당하는 전체 회원 수
-    page: int
-    size: int
-    items: list[UserResponse]
+    size: int = Field(default=100, ge=1, le=100)
 
 
 class RoleUpdateRequest(BaseModel):
-    # PATCH /api/v1/users/role 요청 본문
-    user_ids: list[int] = Field(min_length=1)  # 권한을 변경할 회원 ID 목록 (1개 이상)
-    role: Role  # PENDING / STAFF / ADMIN
-
-    @field_validator("user_ids")
-    @classmethod
-    def _remove_duplicate_ids(cls, value: list[int]) -> list[int]:
-        # 같은 ID가 여러 번 들어와도 한 번만 처리 (순서는 유지)
-        return list(dict.fromkeys(value))
-
-class RoleUpdateResponse(BaseModel):
-    # PATCH /api/v1/users/role 응답
-    updated_count: int  # 권한이 변경된 회원 수
-    role: Role  # 변경된 권한
-    users: list[UserResponse]  # 권한이 변경된 회원 목록
+    # PATCH /api/v1/admin/users/role 요청 본문
+    user_id: int  # 권한을 변경할 회원 ID
+    new_role: Role  # pending / staff / admin

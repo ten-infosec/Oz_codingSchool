@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Cookie, Response, status
+from fastapi import APIRouter, Cookie, Form, Response, status
 
 from app.core.config import settings
 from app.core.dependencies import DbSession
@@ -10,7 +10,7 @@ from app.core.security import (
     create_access_token,
     create_refresh_token,
 )
-from app.schemas.auth import LoginRequest, LoginResponse, TokenResponse
+from app.schemas.auth import LoginResponse, TokenResponse
 from app.schemas.user import UserResponse
 from app.services import auth_service
 
@@ -18,7 +18,8 @@ from app.services import auth_service
 # ===== Router (담당: 엄태은) =====
 
 
-router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
+# 템플릿 화면(static/apis.js)이 /users/login, /users/refresh, /users/logout을 호출하므로 /api/v1/users 아래에 둔다
+router = APIRouter(prefix="/api/v1/users", tags=["auth"])
 
 # 액세스 토큰 만료까지 남은 시간(초) = 30분 × 60
 ACCESS_TOKEN_EXPIRES_IN = settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
@@ -41,7 +42,7 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
     )
 
 
-# ===== POST /api/v1/auth/login =====
+# ===== POST /api/v1/users/login =====
 
 
 @router.post(
@@ -49,8 +50,14 @@ def _set_refresh_cookie(response: Response, refresh_token: str) -> None:
     summary="로그인",
     response_model=LoginResponse,
 )
-async def login(body: LoginRequest, response: Response, db: DbSession):
-    user = await auth_service.authenticate(db, body.email, body.password)
+async def login(
+    response: Response,
+    db: DbSession,
+    # 템플릿 화면은 FormData로 username(=이메일), password를 보낸다 (OAuth2 로그인 폼 관례)
+    username: Annotated[str, Form(description="이메일")],
+    password: Annotated[str, Form()],
+):
+    user = await auth_service.authenticate(db, username, password)
 
     # 리프레시 토큰은 쿠키로, 액세스 토큰은 응답 본문으로
     _set_refresh_cookie(response, create_refresh_token(user.id))
@@ -62,11 +69,11 @@ async def login(body: LoginRequest, response: Response, db: DbSession):
     )
 
 
-# ===== POST /api/v1/auth/token/refresh =====
+# ===== POST /api/v1/users/refresh =====
 
 
 @router.post(
-    "/token/refresh",
+    "/refresh",
     summary="액세스 토큰 재발급",
     response_model=TokenResponse,
 )
@@ -83,7 +90,7 @@ async def refresh_access_token(
     )
 
 
-# ===== POST /api/v1/auth/logout =====
+# ===== POST /api/v1/users/logout =====
 
 
 @router.post(
