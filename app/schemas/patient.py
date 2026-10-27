@@ -30,8 +30,12 @@ class PatientResponse(BaseModel):
 
 
 # ===== Create (담당: 장성은) =====
-# 예: class PatientCreateRequest(BaseModel): name: PatientName, age: Age, gender: Gender, phone_number: PhoneNumber
-
+class PatientCreateRequest(BaseModel):
+    # 환자 정보 등록 요청 본문 (REQ-PTNT-001: 이름, 나이, 성별, 연락처 모두 필수)
+    name: PatientName
+    age: Age
+    gender: Gender
+    phone_number: PhoneNumber
 
 # ===== List (담당: 여현지) =====
 # 예: class PatientListQuery(BaseModel): name, gender, min_age, max_age (명세 3번)

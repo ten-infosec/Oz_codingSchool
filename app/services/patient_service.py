@@ -26,8 +26,36 @@ async def get_patient_or_404(db: AsyncSession, patient_id: int) -> Patient:
 
 
 # ===== Create / Delete (담당: 장성은) =====
-# - 등록: 받은 phone_number를 DB 칸 phone에 저장 (Patient(phone=body.phone_number, ...))
-# - 삭제: 이미지 주소를 먼저 모으고 → 환자 삭제(진료기록·이미지 DB는 CASCADE로 함께 삭제) → 파일 삭제
+from app.core.files import delete_media_file
+from app.repositories import medical_record_repository
+from app.schemas.patient import PatientCreateRequest
+
+
+async def create_patient(db: AsyncSession, body: PatientCreateRequest) -> Patient:
+    # 화면 이름 phone_number → DB 칸 phone 으로 바꿔서 저장
+    patient = Patient(
+        name=body.name,
+        age=body.age,
+        gender=body.gender,
+        phone=body.phone_number,
+    )
+    return await patient_repository.create(db, patient)
+
+
+async def delete_patient(db: AsyncSession, patient_id: int) -> None:
+    # 1) 환자가 없으면 404
+    patient = await get_patient_or_404(db, patient_id)
+
+    # 2) DB에서 지우기 전에 이 환자의 X-ray 이미지 주소를 먼저 모은다
+    #    (환자를 지우면 xray_images 기록도 CASCADE로 사라져서 주소를 알 수 없게 되므로)
+    image_urls = await medical_record_repository.get_image_urls_by_patient(db, patient_id)
+
+    # 3) 환자 삭제 → 진료기록·X-ray 기록은 DB가 함께 삭제
+    await patient_repository.delete(db, patient)
+
+    # 4) 모아둔 주소로 실제 이미지 파일 삭제 (파일이 이미 없으면 그냥 넘어감)
+    for url in image_urls:
+        delete_media_file(url)
 
 
 # ===== List / Detail (담당: 여현지) =====
