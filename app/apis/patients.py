@@ -45,8 +45,36 @@ async def delete_patient(patient_id: int, user: CurrentStaff, db: DbSession):
 
 
 # ===== List / Detail (담당: 여현지) =====
-# GET    /api/v1/patients                 환자 목록 조회 (CurrentStaff, 배열)
-# GET    /api/v1/patients/{patient_id}    환자 정보 상세 조회 (CurrentStaff)
+from fastapi import Query
+
+from app.models.enums import Gender
+
+
+@router.get("", summary="환자 목록 조회", response_model=list[PatientResponse])
+async def list_patients(
+    user: CurrentStaff,
+    db: DbSession,
+    name: str | None = Query(default=None, max_length=100, description="이름 검색 (부분 일치)"),
+    gender: Gender | None = Query(default=None, description="성별 필터 (male / female)"),
+    min_age: int | None = Query(default=None, ge=0, le=150, description="나이 하한 (이상)"),
+    max_age: int | None = Query(default=None, ge=0, le=150, description="나이 상한 (이하)"),
+):
+    return await patient_service.list_patients(
+        db,
+        name=name,
+        gender=gender,
+        min_age=min_age,
+        max_age=max_age,
+    )
+
+
+@router.get("/{patient_id}", summary="환자 정보 상세 조회", response_model=PatientResponse)
+async def get_patient(
+    patient_id: int,
+    user: CurrentStaff,
+    db: DbSession,
+):
+    return await patient_service.get_patient(db, patient_id)
 
 
 # ===== Update (담당: 엄태은, 김민준님 결석으로 대신 담당) =====

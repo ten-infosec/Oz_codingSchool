@@ -59,8 +59,35 @@ async def delete_patient(db: AsyncSession, patient_id: int) -> None:
 
 
 # ===== List / Detail (담당: 여현지) =====
-# - 목록: name 부분 일치, gender, min_age ~ max_age, 최신순, 배열로 반환
-# - 상세: get_patient_or_404 사용
+from app.models.enums import Gender
+
+
+async def list_patients(
+    db: AsyncSession,
+    name: str | None = None,
+    gender: Gender | None = None,
+    min_age: int | None = None,
+    max_age: int | None = None,
+) -> list[Patient]:
+    # 나이 범위가 뒤집혀 있으면 422 (명세 3-3)
+    if min_age is not None and max_age is not None and min_age > max_age:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="min_age는 max_age보다 클 수 없습니다.",
+        )
+
+    return await patient_repository.get_list(
+        db,
+        name=name,
+        gender=gender,
+        min_age=min_age,
+        max_age=max_age,
+    )
+
+
+async def get_patient(db: AsyncSession, patient_id: int) -> Patient:
+    # 상세 조회: 없는 환자는 get_patient_or_404가 404를 낸다 (명세 4-3)
+    return await get_patient_or_404(db, patient_id)
 
 
 # ===== Update (담당: 엄태은, 김민준님 결석으로 대신 담당) =====
