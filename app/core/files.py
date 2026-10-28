@@ -64,3 +64,12 @@ def delete_media_file(url: str) -> None:
     if MEDIA_ROOT.resolve() not in path.parents:
         return
     path.unlink(missing_ok=True)
+
+
+def media_url_to_path(url: str) -> Path:
+    """/media/... 주소를 실제 파일 경로로 바꾼다. (6일차 AI 예측에서 X-ray 파일을 열 때 사용)"""
+    # media 폴더 밖을 가리키는 주소(../ 등)는 없는 파일로 취급한다
+    path = (MEDIA_ROOT / url.removeprefix("/media/")).resolve()
+    if not url.startswith("/media/") or MEDIA_ROOT.resolve() not in path.parents:
+        raise FileNotFoundError(f"media 폴더 밖의 경로입니다: {url}")
+    return path

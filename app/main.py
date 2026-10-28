@@ -1,4 +1,5 @@
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI
@@ -14,8 +15,18 @@ from app.apis.users import admin_router
 # 5일차 환자·진료기록 API 라우터
 from app.apis.patients import router as patients_router
 from app.apis.medical_records import router as medical_records_router
+# 6일차 AI 폐렴 예측 API 라우터
+from app.apis.analyses import router as analyses_router
+from worker.model import get_model
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # 서버가 켜질 때 AI 모델을 한 번 메모리에 올려 둔다 (첫 예측 요청도 3초 이내로)
+    get_model()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 # practice 라우터 등록 (맨 아래 catch_all보다 반드시 위에 있어야 함)
 app.include_router(practice_router)
@@ -24,6 +35,7 @@ app.include_router(users_router)
 app.include_router(admin_router)
 app.include_router(patients_router)
 app.include_router(medical_records_router)
+app.include_router(analyses_router)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
