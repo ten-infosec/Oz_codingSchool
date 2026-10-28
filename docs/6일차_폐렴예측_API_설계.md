@@ -75,19 +75,41 @@
 
 ### 1-5. 공통 예측 결과 응답 객체 (`AnalysisResponse`, 담당: 여현지)
 
-<!--
-- 칸: id, record_id, is_pneumonia, confidence, heatmap_url, ai_model, created_at
-- confidence 단위(%)와 소수 자리, DB Decimal → 응답 number 설명
-- 화면(pages.js renderRecordDetail)이 쓰는 칸 표시
--->
+```json
+{
+  "id": 1,
+  "record_id": 10,
+  "is_pneumonia": true,
+  "confidence": 97.35,
+  "heatmap_url": "/media/heatmaps/3f2b9c1e-8a4d-4f0e-9b7a-2c6d5e1f0a9b.png",
+  "ai_model": "resnet18_e1b",
+  "created_at": "2026-10-28T15:30:00"
+}
+```
+
+| 필드명 | 타입 | 설명 |
+|---|---|---|
+| id | integer | 예측 결과 고유 ID |
+| record_id | integer | 진료기록 ID |
+| is_pneumonia | boolean | 폐렴 여부 (`true` 폐렴, `false` 정상) |
+| confidence | number | 판정한 쪽의 확률(%), 소수 둘째 자리까지 (예: 정상 판정이면 정상일 확률) |
+| heatmap_url | string | Grad-CAM 히트맵 이미지 주소. 서버 주소 뒤에 붙이면 바로 열림 |
+| ai_model | string | 사용한 모델 이름 |
+| created_at | string | 예측 수행 일시 |
+
+- DB `ai_analysis_results.confidence`는 `Decimal(5,2)`이지만, 화면에서 숫자로 바로 쓰도록 `number`로 응답한다.
+- 화면(`pages.js renderRecordDetail`)은 `created_at`, `is_pneumonia`, `confidence`, `ai_model`을 표에 사용한다.
 
 ### 1-6. 공통 에러 응답 (담당: 여현지)
 
-<!--
-- 401, 403(대기자), 404(진료기록 없음 / X-ray 파일 없음), 422, 500(모델 오류)
-- 메시지는 팀 약속(정리 페이지) 문장 그대로
--->
-
+| 상태 코드 | 상황 | 예시 |
+|---|---|---|
+| 401 Unauthorized | 토큰이 없거나 만료·위조된 경우 | `{"detail": "인증 정보가 유효하지 않습니다."}` |
+| 403 Forbidden | 대기자(`pending`)인 경우 | `{"detail": "접근 권한이 없습니다."}` |
+| 404 Not Found | 진료기록이 없는 경우 | `{"detail": "진료기록을 찾을 수 없습니다."}` |
+| 404 Not Found | 진료기록의 X-ray 파일이 없는 경우 (예측) | `{"detail": "X-ray 이미지를 찾을 수 없습니다."}` |
+| 422 Unprocessable Entity | `record_id`가 정수가 아닌 경우 | FastAPI 기본 검증 오류 형식 |
+| 500 Internal Server Error | 모델 예측 중 오류 | `{"detail": "AI 예측 중 오류가 발생했습니다."}` |
 ---
 
 ## 2. AI 폐렴 예측 (담당: 장성은)
