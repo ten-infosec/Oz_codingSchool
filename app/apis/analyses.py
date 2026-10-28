@@ -35,4 +35,5 @@ async def predict_pneumonia(record_id: int, user: CurrentStaff, db: DbSession, r
 
 
 # ===== GET /{record_id}/analyses (담당: 김민준) =====
-# AI 예측 결과 목록: response_model=list[AnalysisResponse], 최신순 배열
+# AI 예측 결과 목록 조회(GET /medical-records/{record_id}/analyses)는
+# app/apis/medical_records.py + ai_analysis_list_* 파일로 구현됨 (#38)

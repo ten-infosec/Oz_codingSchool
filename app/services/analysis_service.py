@@ -74,5 +74,5 @@ async def predict_record(db: AsyncSession, record_id: int) -> tuple[AIAnalysisRe
 
 
 # ===== List (담당: 김민준) =====
-# async def list_analyses(db, record_id) -> list[AIAnalysisResult]
-# get_record_or_404 → analysis_repository.list_by_record (없으면 빈 배열)
+# AI 예측 결과 목록 조회(GET /medical-records/{record_id}/analyses)는
+# app/apis/medical_records.py + ai_analysis_list_* 파일로 구현됨 (#38)
