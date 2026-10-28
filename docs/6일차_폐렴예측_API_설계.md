@@ -147,11 +147,130 @@
 
 ---
 
-## 3. AI 예측 결과 목록 조회 (담당: 김민준)
+## 3. AI 예측 결과 목록 조회 API (담당: 김민준)
 
-<!--
-REQ-PRED-002 참고. 5일차 명세 형식(3-1 ~ 3-4)
-- GET /api/v1/medical-records/{record_id}/analyses, 스태프 이상
-- 200 배열 (AnalysisResponse 목록, id 내림차순), 결과 없으면 []
-- 404 진료기록 없음
--->
+### 3.1. API 개요 — REQ-PRED-002
+
+| 항목 | 내용 |
+| --- | --- |
+| 요구사항 ID | REQ-PRED-002 |
+| Method | `GET` |
+| URL | `/api/v1/medical-records/{record_id}/analyses` |
+| 기능 | 특정 진료기록에 저장된 AI 예측 결과 목록 조회 |
+| 접근 권한 | Bearer Access Token 인증, `STAFF` 또는 `ADMIN` |
+| 부서 제한 | 없음 (스태프 이상이면 부서와 관계없이 접근 가능) |
+| Path Parameter | `record_id`: integer, 1 이상의 양의 정수, 필수 |
+| Request Body | 없음 |
+| 성공 응답 | `200 OK`, JSON 배열 |
+| 정렬 기준 | `created_at DESC`, 동일 시각에는 `id DESC` |
+| 성능 요구사항 | NFR-PRED-002: API 응답시간 3초 이내 |
+
+본 API는 진료기록에 저장된 AI 폐렴 예측 결과를 조회하는 기능이다. 기존 분석 결과를 반환하며, 조회 과정에서 AI 모델을 다시 실행하지 않는다.
+
+### 3.2. 요청 명세
+
+**HTTP Request**
+
+`GET /api/v1/medical-records/{record_id}/analyses`
+
+**Path Parameter**
+
+| 이름 | 타입 | 필수 | 설명 |
+| --- | --- | --- | --- |
+| `record_id` | integer | Y | 조회할 진료기록의 고유 ID (1 이상) |
+
+**Request Header**
+
+| 이름 | 값 | 설명 |
+| --- | --- | --- |
+| `Authorization` | `Bearer {access_token}` | 사용자 인증 토큰 |
+
+Request Body는 사용하지 않는다.
+
+### 3.3. 성공 응답 — 200 OK
+
+**응답 예시**
+
+```json
+[
+  {
+    "id": 21,
+    "record_id": 5,
+    "is_pneumonia": true,
+    "confidence": 97.68,
+    "heatmap_url": "/media/heatmaps/example.png",
+    "ai_model": "resnet18-E1b",
+    "created_at": "2026-10-28T15:20:00"
+  }
+]
+```
+
+위 응답은 형식을 설명하기 위한 예시이며, 실제 값은 데이터베이스에 저장된 분석 결과에 따라 달라진다.
+
+**응답 필드 정의**
+
+| 필드 | 타입 | 설명 |
+| --- | --- | --- |
+| `id` | integer | AI 분석 결과 고유 ID |
+| `record_id` | integer | 해당 분석 결과가 속한 진료기록 ID |
+| `is_pneumonia` | boolean | 폐렴 예측 여부 (`true`: 폐렴, `false`: 정상) |
+| `confidence` | number | 예측 신뢰도, 백분율 0.00~100.00 (%) |
+| `heatmap_url` | string/null | Grad-CAM 히트맵 파일 URL. 없는 경우 `null` |
+| `ai_model` | string | 예측에 사용된 AI 모델 식별자 |
+| `created_at` | string (date-time) | AI 예측 결과 생성 일시 |
+
+**분석 결과가 없는 경우**
+
+진료기록은 존재하지만 저장된 AI 분석 결과가 없는 경우 `200 OK`와 빈 배열을 반환한다.
+
+```json
+[]
+```
+
+### 3.4. 오류 응답
+
+| HTTP 상태 코드 | 발생 조건 | 처리 내용 |
+| --- | --- | --- |
+| `401 Unauthorized` | 인증 토큰이 없거나 유효하지 않은 경우 | 인증 오류 반환 |
+| `403 Forbidden` | `PENDING` 등 접근 권한이 없는 경우 | 접근 거부 |
+| `404 Not Found` | 요청한 `record_id`에 해당하는 진료기록이 존재하지 않는 경우 | 진료기록 없음 반환 |
+| `422 Unprocessable Entity` | `record_id`가 정수가 아니거나 1 미만인 경우 | 요청 파라미터 검증 오류 반환 |
+
+### 3.5. 처리 흐름
+
+1. 클라이언트가 진료기록 ID를 포함하여 GET 요청을 전송한다.
+2. Access Token을 검증하고 사용자의 접근 권한을 확인한다.
+3. 해당 ID의 진료기록이 존재하는지 확인한다.
+4. 진료기록이 없으면 404 오류를 반환한다.
+5. 진료기록이 존재하면 `ai_analysis_results` 테이블에서 해당 `record_id`의 분석 결과를 조회한다.
+6. `created_at`을 기준으로 최신순 정렬하고, 동일한 시각에는 `id`를 기준으로 내림차순 정렬한다.
+7. 조회한 결과를 JSON 배열로 반환한다.
+8. 저장된 분석 결과가 없다면 빈 배열 `[]`을 반환한다.
+
+### 3.6. 구현 및 성능 요구사항
+
+- AI 분석 결과 목록은 데이터베이스에 저장된 데이터를 기준으로 반환한다.
+- 조회 시 AI 모델 추론을 다시 실행하지 않는다.
+- 새로운 AI 분석 결과를 생성하거나 기존 데이터를 수정하지 않는다.
+- 인증 및 권한 검사는 기존 프로젝트의 공통 인증 체계를 사용한다.
+- `STAFF`, `ADMIN` 권한을 가진 사용자만 접근할 수 있다.
+- 응답시간은 NFR-PRED-002에 따라 3초 이내를 목표로 한다.
+- 반환되는 `confidence`의 단위는 예측 실행 API와 동일한 백분율(0~100)로 통일한다.
+- `heatmap_url`이 없는 경우 API 응답에서는 `null`을 허용한다.
+- 실제 응답 필드 및 자료형은 팀 공통 응답 스키마와 일치해야 한다.
+
+### 3.7. 검증 항목
+
+| 테스트 항목 | 기대 결과 |
+| --- | --- |
+| 정상 권한으로 존재하는 진료기록 조회 | 200 OK 및 분석 결과 배열 |
+| 분석 결과가 없는 진료기록 조회 | 200 OK 및 `[]` |
+| 존재하지 않는 진료기록 조회 | 404 Not Found |
+| 인증 토큰 없이 요청 | 401 Unauthorized |
+| `PENDING` 권한으로 요청 | 403 Forbidden |
+| 잘못된 `record_id` 요청 | 422 Unprocessable Entity |
+| 분석 결과 여러 건 조회 | 생성 일시 기준 최신순 정렬 |
+| 저장된 결과 조회 후 DB 확인 | 데이터 변경 없음 |
+| API 응답시간 측정 | 3초 이내 |
+
+※ 최종 테스트 결과는 실제 DB 및 팀 공통 API 구현과 연동하여 확인한다.
