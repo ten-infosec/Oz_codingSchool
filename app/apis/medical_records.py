@@ -1,11 +1,12 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, File, Form, UploadFile, status
+from fastapi import APIRouter, File, Form, Path, UploadFile, status
 
 from app.core.dependencies import CurrentMedicalStaff, CurrentStaff, DbSession
+from app.schemas.ai_analysis_list import AIAnalysisListItem
 from app.schemas.medical_record import MedicalRecordDetailResponse, MedicalRecordListItem
-from app.services import medical_record_service
+from app.services import ai_analysis_list_service, medical_record_service
 
 
 # ===== Medical Records (담당: 엄태은) =====
@@ -53,3 +54,19 @@ async def list_medical_records(patient_id: int, user: CurrentStaff, db: DbSessio
 )
 async def get_medical_record(record_id: int, user: CurrentStaff, db: DbSession):
     return await medical_record_service.get_record(db, record_id)
+
+
+# ===== AI 예측 결과 목록 조회 (6일차, 담당: 김민준) =====
+# POST /medical-records/{record_id}/predict는 다른 팀원이 담당한다.
+@router.get(
+    "/medical-records/{record_id}/analyses",
+    summary="AI 예측 결과 목록 조회",
+    description="진료기록에 저장된 AI 분석 결과를 수행 일시 최신순으로 조회합니다.",
+    response_model=list[AIAnalysisListItem],
+)
+async def list_medical_record_analyses(
+    record_id: Annotated[int, Path(ge=1)],
+    user: CurrentStaff,
+    db: DbSession,
+) -> list[AIAnalysisListItem]:
+    return await ai_analysis_list_service.list_analyses(db, record_id)
