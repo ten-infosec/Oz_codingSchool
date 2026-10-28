@@ -34,4 +34,5 @@ async def create(db: AsyncSession, analysis: AIAnalysisResult) -> AIAnalysisResu
 
 
 # ===== List (담당: 김민준) =====
-# async def list_by_record(db, record_id) -> list[AIAnalysisResult]   (id 내림차순)
+# AI 예측 결과 목록 조회(GET /medical-records/{record_id}/analyses)는
+# app/apis/medical_records.py + ai_analysis_list_* 파일로 구현됨 (#38)
