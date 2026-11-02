@@ -18,3 +18,15 @@ dependencies = [
     "torchvision>=0.29.1",
     "uuid6>=2025.0.1",
 ]
+
+# ===== PyTorch CPU wheels (Docker / Linux) =====
+# PyPI의 리눅스용 torch는 GPU(CUDA) 라이브러리까지 받아 이미지가 수 GB가 된다
+# 리눅스(도커 컨테이너)에서만 CPU 전용 인덱스를 쓰고, Windows·macOS는 지금처럼 PyPI를 쓴다
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
+torchvision = [{ index = "pytorch-cpu", marker = "sys_platform == 'linux'" }]
