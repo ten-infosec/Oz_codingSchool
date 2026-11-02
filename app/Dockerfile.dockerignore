@@ -1,0 +1,55 @@
+# ===== Why this file name =====
+# 빌드 컨텍스트는 프로젝트 루트(.)이고 Dockerfile은 app/에 있다
+# 도커는 "컨텍스트 루트의 .dockerignore" 또는 "Dockerfile 옆의 <Dockerfile이름>.dockerignore"만 읽는다
+# → app/.dockerignore라는 이름은 무시되므로 app/Dockerfile.dockerignore로 둔다
+
+
+# ===== Environment Files =====
+# DB 비밀번호, SECRET_KEY가 이미지에 들어가면 이미지를 받은 누구나 볼 수 있다
+.env
+*.env
+.env.*
+!.env.example
+envs/
+
+# ===== Python Cache =====
+__pycache__/
+**/__pycache__/
+*.py[cod]
+
+# ===== Library Cache =====
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ===== Virtual Environment =====
+# 로컬(Windows) 가상환경은 리눅스 컨테이너에서 쓸 수 없고 용량만 크다
+.venv/
+venv/
+
+# ===== Docker Files =====
+**/Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# ===== Docs =====
+docs/
+README.md
+alembic/README.md
+
+# ===== IDE Settings =====
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# ===== Git =====
+.git/
+.gitignore
+
+# ===== Uploaded Files & Tests =====
+# media/에는 환자 X-ray가 들어 있으므로 이미지에 절대 넣지 않는다
+media/
+tests/
